@@ -1,0 +1,40 @@
+{
+  "name": "physics-demos",
+  "version": "1.0.0",
+  "description": "Animations for demonstrating physics concepts",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "start": "webpack serve --mode development"
+  },
+  "keywords": [
+    "physics",
+    "simulations",
+    "threejs"
+  ],
+  "author": "Sandesh Chapagain",
+  "license": "ISC",
+  "dependencies": {
+    "cannon": "^0.6.2",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "three": "^0.131.3"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.13.16",
+    "@babel/plugin-transform-runtime": "^7.14.2",
+    "@babel/preset-env": "^7.13.15",
+    "@babel/preset-react": "^7.13.13",
+    "autoprefixer": "^10.2.5",
+    "babel-loader": "^8.2.2",
+    "css-loader": "^5.2.4",
+    "html-webpack-plugin": "^5.3.1",
+    "postcss": "^8.2.15",
+    "postcss-loader": "^5.3.0",
+    "style-loader": "^2.0.0",
+    "tailwindcss": "^2.1.2",
+    "webpack": "^5.35.1",
+    "webpack-cli": "^4.6.0",
+    "webpack-dev-server": "^3.11.2"
+  }
+}
