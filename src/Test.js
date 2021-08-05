@@ -4,11 +4,9 @@ import * as CANNON from "cannon";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import Loading from "./Loading";
 
-const raycaster = new THREE.Raycaster();
-
 var world,
-  mass,
-  body,
+  ball,
+  rod,
   shape,
   timeStep = 1 / 60,
   camera,
@@ -16,30 +14,25 @@ var world,
   renderer,
   geometry,
   material,
-  mesh;
+  ballMesh,
+  rodMesh;
+
+const ROD_RADIUS = 0.1;
+const BALL_RADIUS = 1;
+const ROD_HEIGHT = 10;
+
+function Pendulum(length) {
+  const geometry = new THREE.SphereGeometry(1, 32, 16);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffff00,
+    wireframe: true,
+  });
+  return new THREE.Mesh(geometry, material);
+}
 
 export default function Test() {
   const [container, setContainer] = useState();
   const [isLoading, setLoading] = useState(false);
-
-  function raycast(e, touch = false, click = false) {
-    var mouse = { x: 0, y: 0 };
-    if (touch) {
-      mouse.x = 2 * (e.changedTouches[0].clientX / window.innerWidth) - 1;
-      mouse.y = 1 - 2 * (e.changedTouches[0].clientY / window.innerHeight);
-    } else {
-      mouse.x = 2 * (e.clientX / window.innerWidth) - 1;
-      mouse.y = 1 - 2 * (e.clientY / window.innerHeight);
-    }
-    // update the picking ray with the camera and mouse position
-    raycaster.setFromCamera(mouse, camera);
-
-    // calculate objects intersecting the picking ray
-    var intersects = raycaster.intersectObjects(scene.children, true);
-
-    if (intersects[0]) {
-    }
-  }
 
   const containerMountCb = (node) => {
     if (node) {
@@ -65,18 +58,25 @@ export default function Test() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(wrapper.offsetWidth, wrapper.offsetHeight);
 
-    geometry = new THREE.BoxGeometry(2, 2, 2);
-    material = new THREE.MeshBasicMaterial({
-      color: 0xff0000,
-      wireframe: true,
+    const ballGeometry = new THREE.SphereGeometry(BALL_RADIUS, 32, 16);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x00ffff,
     });
 
     controls = new OrbitControls(camera, container);
-    controls.minDistance = 500;
-    controls.maxDistance = 1500;
 
-    mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
+    ballMesh = new THREE.Mesh(ballGeometry, material);
+    scene.add(ballMesh);
+
+    const rodGeometry = new THREE.CylinderGeometry(
+      ROD_RADIUS,
+      ROD_RADIUS,
+      10,
+      32,
+      32
+    );
+    rodMesh = new THREE.Mesh(rodGeometry, material);
+    scene.add(rodMesh);
 
     wrapper.appendChild(renderer.domElement);
 
@@ -87,9 +87,6 @@ export default function Test() {
       renderer.setSize(container.offsetWidth, container.offsetHeight);
     };
     window.addEventListener("resize", onWindowResize, false);
-    window.addEventListener("click", (e) => raycast(e, false, true));
-    window.addEventListener("mousemove", (e) => raycast(e));
-    window.addEventListener("touchend", (e) => raycast(e, true, true));
   }
 
   function initCannon() {
@@ -98,15 +95,27 @@ export default function Test() {
     world.broadphase = new CANNON.NaiveBroadphase();
     world.solver.iterations = 10;
 
-    shape = new CANNON.Box(new CANNON.Vec3(1, 1, 1));
-    mass = 1;
-    body = new CANNON.Body({
+    const rodShape = new CANNON.Cylinder(
+      ROD_RADIUS,
+      ROD_RADIUS,
+      ROD_HEIGHT,
+      100
+    );
+    rod = new CANNON.Body({
       mass: 1,
     });
-    body.addShape(shape);
-    body.angularVelocity.set(0, 10, 0);
-    body.angularDamping = 0.5;
-    world.addBody(body);
+    rod.addShape(rodShape);
+    world.addBody(rod);
+    rod.position.set(0, 0.5 * ROD_HEIGHT + BALL_RADIUS, 0);
+
+    const ballShape = new CANNON.Sphere(BALL_RADIUS);
+    ball = new CANNON.Body({
+      mass: 1,
+    });
+    ball.addShape(ballShape);
+    ball.angularVelocity.set(0, 10, 0);
+    ball.angularDamping = 0.5;
+    world.addBody(ball);
   }
 
   function animate() {
@@ -120,8 +129,10 @@ export default function Test() {
     // Step the physics world
     world.step(timeStep);
     // Copy coordinates from Cannon.js to Three.js
-    mesh.position.copy(body.position);
-    mesh.quaternion.copy(body.quaternion);
+    ball & ballMesh.position.copy(ball.position);
+    ball & ballMesh.quaternion.copy(ball.quaternion);
+    rod && rodMesh.position.copy(rod.position);
+    rod && rodMesh.quaternion.copy(rod.quaternion);
   }
 
   useEffect(() => {
