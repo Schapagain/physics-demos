@@ -57,7 +57,7 @@ const getEarthCamera = (target) => {
 
 export default function Test() {
   const [container, setContainer] = useState();
-  const [isLoading, setLoading] = useState(false);
+  const [isLoading, setLoading] = useState(true);
 
   const containerMountCb = (node) => {
     if (node) {
@@ -216,7 +216,7 @@ export default function Test() {
       <div className="w-full h-full" ref={containerMountCb}></div>
       <button
         onClick={toggleCameraView}
-        className="fixed z-50 px-3 py-2 top-5 left-5 rounded-2xl bg-indigo-300"
+        className="fixed z-30 px-3 py-2 top-5 left-5 rounded-2xl bg-indigo-300"
       >
         Switch!
       </button>
