@@ -169,8 +169,7 @@ export default function Test() {
 
     updatePhysics();
     requestAnimationFrame(animate);
-    // earthMesh.rotateOnAxis(new THREE.Vector3(0.39, 0.92, 0), 0.05);
-    earthMesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), 0.05);
+    earthMesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), 0.006);
   }
 
   function updatePhysics() {
