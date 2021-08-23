@@ -28,7 +28,6 @@ var world,
 const BALL_RADIUS = 1;
 const EARTH_RADIUS = 10;
 const GRAVITY_ACCN = -9.81;
-const DEMO_SPEED = 10000;
 const SECONDS_IN_DAY = 86400;
 const PENDULUM_TO_SECONDS_IN_DAY = 1;
 const DISPLAY_PENDULUM_LENGTH = 10;
@@ -43,7 +42,7 @@ const getMainCamera = (aspect, target) => {
     75,
     window.innerWidth / window.innerHeight,
     1,
-    200
+    1000
   );
   camera.position.z = EARTH_RADIUS * 3;
   camera.aspect = aspect;
@@ -55,7 +54,7 @@ const getEarthCamera = (target) => {
     75,
     window.innerWidth / window.innerHeight,
     1,
-    200
+    1000
   );
   camera.translateY(EARTH_RADIUS);
   camera.translateX(1);
@@ -84,21 +83,42 @@ function rotateAboutPoint(obj, point, axis, theta, pointIsWorld) {
   obj.rotateOnAxis(axis, theta); // rotate the OBJECT
 }
 
+function createSkyboxMaterialArray() {
+  const loader = new THREE.TextureLoader();
+  let sides = ["px", "nx", "py", "ny", "pz", "nz"];
+  return sides.map(
+    (side) =>
+      new THREE.MeshBasicMaterial({
+        map: loader.load(`cube_maps/stars/${side}.png`),
+        side: THREE.BackSide,
+      })
+  );
+}
+
 export default function Test() {
   const [container, setContainer] = useState();
   const [isLoading, setLoading] = useState(true);
+  const [demoSpeed, setDemoSpeed] = useState(10000);
+
   const [pendulumObj, setPendulumObj] = useState({
-    period: (PENDULUM_TO_SECONDS_IN_DAY * SECONDS_IN_DAY) / DEMO_SPEED,
+    period: 1,
     mass: 1,
     intialAngle: Math.PI / 4,
   });
-  const [earthPeriod, setEarthPeriod] = useState(SECONDS_IN_DAY / DEMO_SPEED);
+  const [earthPeriod, setEarthPeriod] = useState(SECONDS_IN_DAY / demoSpeed);
 
   const containerMountCb = (node) => {
     if (node) {
       setContainer(node);
     }
   };
+
+  useEffect(() => {
+    demoSpeed && setEarthPeriod(SECONDS_IN_DAY / demoSpeed);
+    if (pendulumObj && world) {
+      initPendulumPhysics(pendulumObj);
+    }
+  }, [demoSpeed]);
 
   function initThree(wrapper) {
     scene = new THREE.Scene();
@@ -115,14 +135,20 @@ export default function Test() {
     scene.add(pendulum);
     ballMesh = new THREE.Mesh(ballGeometry, material);
     ballMesh.position.set(
-      periodToLength(pendulumObj.period) * Math.sin(pendulumObj.intialAngle),
-      -periodToLength(pendulumObj.period) * Math.cos(pendulumObj.intialAngle),
+      periodToLength(earthPeriod / pendulumObj.period) *
+        Math.sin(pendulumObj.intialAngle),
+      -periodToLength(earthPeriod / pendulumObj.period) *
+        Math.cos(pendulumObj.intialAngle),
       0
     );
     const pivot = new THREE.Mesh(
       new THREE.SphereGeometry(0.1, 32, 16),
       material
     );
+
+    const starCube = new THREE.BoxGeometry(1000, 1000, 1000);
+    const stars = new THREE.Mesh(starCube, createSkyboxMaterialArray());
+    scene.add(stars);
 
     const earthGeometry = new THREE.SphereGeometry(EARTH_RADIUS, 64, 32);
     const earthMaterial = new THREE.MeshBasicMaterial({
@@ -183,7 +209,6 @@ export default function Test() {
   }
 
   function initPendulumPhysics(pendulumObj) {
-    console.log(pendulumObj);
     world = new CANNON.World();
     world.gravity.set(0, GRAVITY_ACCN, 0);
     world.broadphase = new CANNON.NaiveBroadphase();
@@ -212,8 +237,10 @@ export default function Test() {
     });
 
     ball.position.set(
-      periodToLength(pendulumObj.period) * Math.sin(pendulumObj.intialAngle),
-      -periodToLength(pendulumObj.period) * Math.cos(pendulumObj.intialAngle),
+      periodToLength(earthPeriod / pendulumObj.period) *
+        Math.sin(pendulumObj.intialAngle),
+      -periodToLength(earthPeriod / pendulumObj.period) *
+        Math.cos(pendulumObj.intialAngle),
       0
     );
     ball.linearDamping = 0;
@@ -229,13 +256,12 @@ export default function Test() {
     earth.addShape(earthShape);
     earth.angularDamping = 0;
     earth.angularVelocity.set(0, (2 * Math.PI) / earthPeriod, 0);
-    console.log(earth.angularVelocity);
     world2.addBody(earth);
 
     var c = new CANNON.DistanceConstraint(
       ball,
       pivot,
-      periodToLength(pendulumObj.period)
+      periodToLength(earthPeriod / pendulumObj.period)
     );
     world.addConstraint(c);
   }
@@ -324,28 +350,24 @@ export default function Test() {
           Switch!
         </button>
         <span className="text-white">
-          Pendulum period: {pendulumObj.period / earthPeriod} x Earth's period
+          Earth period: {pendulumObj.period} x Pendulum's period
         </span>
         <input
           type="range"
-          max={80}
-          min={0}
-          step={10}
-          value={radToDeg(pendulumObj.intialAngle)}
-          onChange={(e) =>
-            updatePendulum("initialAngle", degToRad(Number(e.target.value)))
-          }
+          max={5}
+          min={1}
+          step={1}
+          value={pendulumObj.period}
+          onChange={(e) => updatePendulum("period", Number(e.target.value))}
         />
-        <span className="text-white">Demo Speed: {DEMO_SPEED}</span>
+        <span className="text-white">Demo Speed: {demoSpeed}</span>
         <input
           type="range"
-          max={80}
-          min={0}
-          step={10}
-          value={radToDeg(pendulumObj.intialAngle)}
-          onChange={(e) =>
-            updatePendulum("initialAngle", degToRad(Number(e.target.value)))
-          }
+          max={100000}
+          min={1}
+          step={1000}
+          value={demoSpeed}
+          onChange={(e) => setDemoSpeed(Number(e.target.value))}
         />
       </div>
     </>
